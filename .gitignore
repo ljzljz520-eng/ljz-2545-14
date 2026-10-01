@@ -23,3 +23,8 @@ __pycache__/
 *.log
 .env
 .env.*
+
+# 季节年历本地 SQLite（运行时自动生成，可删除重建）
+data/*.db
+data/*.db-wal
+data/*.db-shm

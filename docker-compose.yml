@@ -5,26 +5,21 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: smartlearn-web
+    container_name: slow-station-calendar
     ports:
-      - "8080:80"
+      # 季节年历（前端 + API 同一端口）
+      - "8090:8090"
     restart: unless-stopped
     volumes:
-      # 开发模式：挂载本地文件，修改后自动生效
-      - ./index.html:/usr/share/nginx/html/index.html
-      - ./courses.html:/usr/share/nginx/html/courses.html
-      - ./plan.html:/usr/share/nginx/html/plan.html
-      - ./resources.html:/usr/share/nginx/html/resources.html
-      - ./profile.html:/usr/share/nginx/html/profile.html
-      - ./about.html:/usr/share/nginx/html/about.html
-      - ./contact.html:/usr/share/nginx/html/contact.html
-      - ./demo.html:/usr/share/nginx/html/demo.html
-      - ./css:/usr/share/nginx/html/css
-      - ./js:/usr/share/nginx/html/js
-    networks:
-      - smartlearn-network
+      # 开发模式：挂载源码，修改后重启容器生效
+      - ./:/app
     environment:
       - TZ=Asia/Shanghai
+      - PORT=8090
+      # SQLite 持久化到挂载目录
+      - CALENDAR_DB=/app/data/calendar.db
+    networks:
+      - smartlearn-network
 
 networks:
   smartlearn-network:

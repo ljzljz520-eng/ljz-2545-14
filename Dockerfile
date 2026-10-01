@@ -1,29 +1,25 @@
-# 使用nginx作为Web服务器
-FROM nginx:alpine
+# 季节年历：Python 3 标准库同时托管静态前端与 /api/*，零第三方依赖
+FROM python:3.11-slim
 
-# 设置工作目录
-WORKDIR /usr/share/nginx/html
+ENV PYTHONUNBUFFERED=1 \
+    PORT=8090 \
+    TZ=Asia/Shanghai \
+    STATIC_ROOT=/app
 
-# 删除nginx默认页面
-RUN rm -rf /usr/share/nginx/html/*
+WORKDIR /app
 
-# 复制项目文件到nginx目录
-COPY index.html .
-COPY courses.html .
-COPY plan.html .
-COPY resources.html .
-COPY profile.html .
-COPY about.html .
-COPY contact.html .
-COPY demo.html .
+# 静态站点
+COPY index.html courses.html plan.html resources.html profile.html about.html \
+     contact.html demo.html calendar.html ./
 COPY css/ ./css/
 COPY js/ ./js/
+# 季节年历后端与种子
+COPY server/ ./server/
+RUN mkdir -p /app/data
 
-# 复制自定义nginx配置
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 8090
 
-# 暴露80端口
-EXPOSE 80
+# 健康检查：后端健康接口
+HEALTHCHECK --interval=30s --timeout=3s CMD python3 -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8090/api/health',timeout=2).status==200 else 1)"
 
-# 启动nginx
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["python3", "server/app.py"]

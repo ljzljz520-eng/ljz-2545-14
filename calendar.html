@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>季节年历 - 城市慢行站</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/calendar.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand"><h1>城市慢行站</h1></div>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="index.html">首页</a></li>
+                <li><a href="calendar.html" class="active">季节年历</a></li>
+                <li><a href="courses.html">课程中心</a></li>
+                <li><a href="plan.html">学习计划</a></li>
+                <li><a href="resources.html">学习资源</a></li>
+                <li><a href="profile.html">个人中心</a></li>
+                <li><a href="about.html">关于我们</a></li>
+                <li><a href="contact.html">联系我们</a></li>
+            </ul>
+            <div class="nav-toggle" id="navToggle"><span></span><span></span><span></span></div>
+        </div>
+    </nav>
+
+    <header class="cal-hero">
+        <div class="container">
+            <h2>🗓️ 慢行活动 · 季节年历</h2>
+            <p>按活动所在地时区计算周期；编辑赛季规则、单次例外与关联路线。施工只影响<strong>相交路段与相交时间</strong>，不会取消整季。</p>
+            <div class="cal-toolbar">
+                <label>浏览者时区（仅影响展示）
+                    <select id="viewerTz"></select>
+                </label>
+                <span id="apiState" class="api-state">连接中…</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container cal-layout">
+        <!-- 左：模板列表 + 编辑器 -->
+        <section class="cal-panel cal-left">
+            <div class="panel-head">
+                <h3>活动模板（系列）</h3>
+                <button class="btn btn-primary btn-sm" id="newTplBtn">＋ 新建模板</button>
+            </div>
+            <ul id="tplList" class="tpl-list"></ul>
+
+            <form id="tplForm" class="tpl-form" hidden>
+                <h4 id="formTitle">编辑活动周期</h4>
+                <p class="form-hint">系列规则与单次例外分开保存：改系列<strong>不会</strong>覆盖已结束或已挂例外的场次。</p>
+                <div class="grid2">
+                    <label>标识 slug<input name="slug" required placeholder="friday-night-ride"></label>
+                    <label>名称<input name="title" required></label>
+                </div>
+                <label>说明<textarea name="description" rows="2"></textarea></label>
+                <div class="grid2">
+                    <label>活动所在地时区
+                        <select name="timezone" id="tzSelect"></select>
+                    </label>
+                    <label>关联路线
+                        <select name="route_id" id="routeSelect"><option value="">（不关联）</option></select>
+                    </label>
+                </div>
+                <div class="grid2">
+                    <label>占用路段起(km)<input name="seg_from" type="number" step="0.1" value="0"></label>
+                    <label>占用路段止(km)<input name="seg_to" type="number" step="0.1" value="1000000"></label>
+                </div>
+                <div class="grid3">
+                    <label>频率
+                        <select name="rrule_freq" id="freqSelect">
+                            <option value="DAILY">每天</option>
+                            <option value="WEEKLY" selected>每周</option>
+                            <option value="MONTHLY">每月</option>
+                        </select>
+                    </label>
+                    <label>间隔<input name="rrule_interval" type="number" min="1" value="1"></label>
+                    <label class="wk-field">周几（0=周一）
+                        <input name="by_weekday" placeholder="4 = 周五；多个: 1,4">
+                    </label>
+                    <label class="mo-field" hidden>月内日期
+                        <input name="by_monthday" placeholder="31；月末用 -1；多个: 1,15">
+                    </label>
+                </div>
+                <div class="grid2">
+                    <label>赛季起<input name="start_date" type="date" required></label>
+                    <label>赛季止（含）<input name="end_date" type="date" required></label>
+                </div>
+                <div class="grid2">
+                    <label>开始时间（当地）<input name="start_time" type="time" value="19:00"></label>
+                    <label>结束时间（当地，可早于开始=跨午夜）<input name="end_time" type="time" value="20:30"></label>
+                </div>
+                <label>海报文案/链接<input name="poster" placeholder="海报 URL 或文案（取消时自动留存快照）"></label>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="saveTplBtn">保存并展开</button>
+                    <button type="button" class="btn btn-ghost" id="cancelFormBtn">取消</button>
+                    <span class="idempotency-note" id="tplIdem"></span>
+                </div>
+            </form>
+        </section>
+
+        <!-- 中：月历 -->
+        <section class="cal-panel cal-center">
+            <div class="panel-head cal-nav">
+                <button class="btn btn-ghost btn-sm" id="prevMonth">‹</button>
+                <h3 id="monthTitle">—</h3>
+                <button class="btn btn-ghost btn-sm" id="nextMonth">›</button>
+                <button class="btn btn-ghost btn-sm" id="rematBtn" title="重新跑一次有界展开（重复任务幂等）">↻ 重新展开</button>
+            </div>
+            <div class="weekday-row"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+            <div id="monthGrid" class="month-grid"></div>
+            <div class="legend">
+                <span><i class="dot sched"></i>正常</span>
+                <span><i class="dot moved"></i>改期</span>
+                <span><i class="dot cancel"></i>取消</span>
+                <span><i class="dot notice"></i>施工提示</span>
+            </div>
+        </section>
+
+        <!-- 右：详情/依据 + 本周推荐 + 历史 -->
+        <section class="cal-panel cal-right">
+            <div id="detailBox" class="detail-box">
+                <h3>场次详情</h3>
+                <p class="muted">点击日历中的活动，查看“为什么出现在这一天”的计算依据，并可做单次取消/改期/恢复。</p>
+            </div>
+
+            <div class="weekly-box">
+                <div class="panel-head"><h3>本周推荐</h3>
+                    <span id="cacheState" class="cache-tag"></span>
+                </div>
+                <ul id="weeklyList" class="weekly-list"></ul>
+            </div>
+
+            <div class="history-box">
+                <h3>取消 / 恢复历史（可追溯）</h3>
+                <ul id="historyList" class="history-list"></ul>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast" class="toast" hidden></div>
+    <script src="js/calendar.js"></script>
+</body>
+</html>
