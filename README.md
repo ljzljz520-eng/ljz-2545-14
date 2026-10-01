@@ -351,6 +351,71 @@ docker-compose up -d --build
 3. **浏览器版本**：建议使用最新版本浏览器以获得最佳体验
 4. **分辨率**：推荐1366x768及以上分辨率浏览
 
+---
+
+# 🚲 城市慢行站 · 季节年历（全栈模块）
+
+在静态站点之上新增的全栈功能：为城市慢行站提供**季节年历**，支持循环活动模板、单次例外（取消/临时改期）、路线施工提示与计算依据解释。
+
+## 架构
+
+```
+calendar.html + js/calendar.js + css/calendar.css   # 日历页（月历/季节/模板编辑/施工通告）
+server/
+├── schema.sql     # SQL：模板、发生实例、取消历史、例外、路线分段、施工通告、修订审计
+├── tz.js          # 时区：一切周期计算按活动所在地；浏览者时区仅影响展示
+├── rrule.js       # 有界周期展开（DAILY/WEEKLY/MONTHLY, BYDAY/BYMONTHDAY, UNTIL/COUNT）
+├── service.js     # 幂等生成 + 例外优先 + 系列编辑不覆盖已结束实例 + 施工相交 + 版本化缓存
+├── index.js       # 零框架 HTTP API + 静态站点服务
+└── seed.js        # 演示数据
+tests/             # node:test，19 个用例
+```
+
+## 快速开始
+
+```bash
+cd server && npm install     # 安装 better-sqlite3
+npm start                    # http://localhost:3000/calendar.html
+npm test                     # 运行全部测试（在仓库根目录执行）
+# 或 Docker：docker compose up calendar
+```
+
+## 核心规则
+
+| 规则 | 实现 |
+|---|---|
+| 循环与临时改期分开 | 改期存 `activity_exceptions` + 独立 `exc:*` 实例，系列其余场次不动 |
+| 改系列不覆盖已结束实例 | 重新生成只更新 `status=scheduled` 且未结束的行；历史行一字不改 |
+| 时区按活动所在地 | 展开/跨午夜/DST 全部按 `stations.tz` 墙钟计算；`viewer_tz` 仅用于展示字段 |
+| 施工只影响相交场 | `closures` 按 路段相交 AND 时间区间相交 逐场判定，只打提示不整季取消 |
+| 幂等生成 | 实例 id 确定性（`ser:{tpl}:{date}`），重复生成/重复任务结果完全一致 |
+| 例外优先 | 取消/改期场次在重新生成时绝不复活；取消历史 `his:{instance}` 幂等写入 |
+| 缓存不迟到 | 写操作 bump `data_version`，读缓存按版本校验，写后立即可读 |
+| 可追溯 | 实例存海报快照；取消历史存理由+当时海报；模板每次修改留 `template_revisions` |
+| 可解释 | `GET /api/instances/:id/explain` 返回规则、场次序号、时区换算、例外与施工依据 |
+
+## 主要 API
+
+```
+GET  /api/stations
+GET  /api/calendar?station_id=&from=&to=&viewer_tz=     # 月历区间（含施工提示）
+GET  /api/recommendations/week?station_id=&ref=         # 本周推荐（取消场次不重现）
+GET  /api/instances/:id/explain?viewer_tz=              # 计算依据
+GET  /api/cancellations?station_id=                     # 取消历史
+POST /api/templates                                     # 建循环活动
+PUT  /api/templates/:id                                 # 改系列（不动已结束实例）
+POST /api/templates/:id/exceptions                      # 单次取消/改期
+POST /api/closures                                      # 施工通告（路段×时间）
+```
+
+## 测试覆盖（19 例）
+
+月底越界（2 月无 31 日跳过、闰年 2/29）· 跨年（周序列与 UNTIL 跨界）· 重复实例任务幂等 ·
+某次取消后模板更新（取消不复活、未来场次跟随）· 缓存迟到（写后读一致）·
+本周推荐不重现取消场次 · 临时改期与循环分开 · 跨午夜归属开始日 ·
+纽约站 DST 切换本地时刻不变 · 施工相交路段×相交时间 · 改系列不覆盖已结束实例 ·
+计算依据可解释 · 历史海报与理由可追溯 · 例外日期合法性校验 · HTTP 全流程集成
+
 ## 📞 联系方式
 
 如有问题或建议，欢迎联系：

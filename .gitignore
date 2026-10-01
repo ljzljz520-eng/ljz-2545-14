@@ -23,3 +23,7 @@ __pycache__/
 *.log
 .env
 .env.*
+
+# 年历服务
+server/node_modules/
+server/data.sqlite*

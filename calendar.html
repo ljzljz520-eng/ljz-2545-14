@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>季节年历 - 城市慢行站</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/calendar.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand"><h1>智慧学习</h1></div>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="index.html">首页</a></li>
+                <li><a href="courses.html">课程中心</a></li>
+                <li><a href="plan.html">学习计划</a></li>
+                <li><a href="resources.html">学习资源</a></li>
+                <li><a href="calendar.html" class="active">季节年历</a></li>
+                <li><a href="profile.html">个人中心</a></li>
+                <li><a href="about.html">关于我们</a></li>
+                <li><a href="contact.html">联系我们</a></li>
+            </ul>
+            <div class="nav-toggle" id="navToggle"><span></span><span></span><span></span></div>
+        </div>
+    </nav>
+
+    <section class="page-header">
+        <div class="container">
+            <h1>城市慢行站 · 季节年历</h1>
+            <p>循环活动、单次例外与路线施工的统一日历 —— 周期按活动所在地计算，浏览者时区仅影响展示</p>
+        </div>
+    </section>
+
+    <section class="calendar-section">
+        <div class="container">
+            <!-- 控制条 -->
+            <div class="cal-toolbar">
+                <div class="cal-toolbar-group">
+                    <label>慢行站</label>
+                    <select id="stationSelect"></select>
+                </div>
+                <div class="cal-toolbar-group">
+                    <label>浏览者时区<small>（仅影响展示）</small></label>
+                    <select id="viewerTzSelect">
+                        <option value="">站点时区</option>
+                        <option value="Asia/Shanghai">Asia/Shanghai</option>
+                        <option value="Asia/Tokyo">Asia/Tokyo</option>
+                        <option value="Europe/London">Europe/London</option>
+                        <option value="America/New_York">America/New_York</option>
+                        <option value="America/Los_Angeles">America/Los_Angeles</option>
+                    </select>
+                </div>
+                <div class="cal-toolbar-group season-tabs" id="seasonTabs">
+                    <button data-season="spring">春 3-5月</button>
+                    <button data-season="summer">夏 6-8月</button>
+                    <button data-season="autumn">秋 9-11月</button>
+                    <button data-season="winter">冬 12-2月</button>
+                </div>
+                <div class="cal-toolbar-group month-nav">
+                    <button id="prevMonth" class="btn btn-outline btn-small">‹ 上月</button>
+                    <strong id="monthLabel"></strong>
+                    <button id="nextMonth" class="btn btn-outline btn-small">下月 ›</button>
+                    <button id="todayBtn" class="btn btn-outline btn-small">今天</button>
+                </div>
+            </div>
+
+            <div class="cal-layout">
+                <!-- 月历 -->
+                <div class="cal-main">
+                    <div class="cal-grid cal-weekdays">
+                        <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+                    </div>
+                    <div class="cal-grid" id="calGrid"></div>
+                    <div class="cal-legend">
+                        <span><i class="dot dot-ok"></i>正常</span>
+                        <span><i class="dot dot-cancel"></i>已取消</span>
+                        <span><i class="dot dot-move"></i>已改期</span>
+                        <span><i class="dot dot-warn"></i>施工提示</span>
+                        <span><i class="dot dot-midnight"></i>跨午夜</span>
+                    </div>
+                </div>
+
+                <!-- 侧栏 -->
+                <aside class="cal-side">
+                    <div class="side-card">
+                        <h3>📅 本周推荐 <small id="weekRange"></small></h3>
+                        <ul id="weekList" class="mini-list"></ul>
+                    </div>
+                    <div class="side-card">
+                        <h3>🚧 施工通告</h3>
+                        <ul id="closureList" class="mini-list"></ul>
+                        <form id="closureForm" class="mini-form">
+                            <select id="closureRoute" required></select>
+                            <select id="closureSegment"><option value="">全线</option></select>
+                            <input type="datetime-local" id="closureStart" required>
+                            <input type="datetime-local" id="closureEnd" required>
+                            <input type="text" id="closureReason" placeholder="原因（如：栈道检修）" required>
+                            <button class="btn btn-primary btn-small" type="submit">发布通告</button>
+                            <small>仅影响相交路段 × 相交时间的场次，不会整季取消</small>
+                        </form>
+                    </div>
+                    <div class="side-card">
+                        <h3>🗂 取消历史（可追溯）</h3>
+                        <ul id="cancelHistory" class="mini-list"></ul>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- 活动模板管理 -->
+            <div class="template-panel">
+                <div class="template-list-col">
+                    <h2>循环活动模板</h2>
+                    <ul id="templateList" class="template-list"></ul>
+                </div>
+                <div class="template-form-col">
+                    <h2 id="tplFormTitle">新建循环活动</h2>
+                    <form id="templateForm" class="tpl-form">
+                        <input type="hidden" id="tplId">
+                        <div class="form-row">
+                            <label>活动名称<input type="text" id="tplTitle" required placeholder="如：周末晨骑"></label>
+                            <label>季节<select id="tplSeason">
+                                <option value="2026-spring">2026 春</option>
+                                <option value="2026-summer">2026 夏</option>
+                                <option value="2026-autumn" selected>2026 秋</option>
+                                <option value="2026-winter">2026 冬</option>
+                                <option value="2027-spring">2027 春</option>
+                            </select></label>
+                        </div>
+                        <div class="form-row">
+                            <label>关联路线<select id="tplRoute"></select></label>
+                            <label>经过路段（施工相交判定用）</label>
+                        </div>
+                        <div id="tplSegments" class="segment-checks"></div>
+                        <div class="form-row">
+                            <label>重复
+                                <select id="tplFreq">
+                                    <option value="WEEKLY">每周</option>
+                                    <option value="DAILY">每天</option>
+                                    <option value="MONTHLY">每月</option>
+                                </select>
+                            </label>
+                            <label id="bydayWrap">星期
+                                <select id="tplByday">
+                                    <option value="MO">周一</option><option value="TU">周二</option>
+                                    <option value="WE">周三</option><option value="TH">周四</option>
+                                    <option value="FR">周五</option><option value="SA" selected>周六</option>
+                                    <option value="SU">周日</option>
+                                </select>
+                            </label>
+                            <label id="bymonthdayWrap" style="display:none">每月第几日
+                                <input type="number" id="tplBymonthday" min="1" max="31" value="15">
+                                <small>月底越界的月份自动跳过（如 2 月无 31 日）</small>
+                            </label>
+                        </div>
+                        <div class="form-row">
+                            <label>首场日期<input type="date" id="tplDtstart" required></label>
+                            <label>开始时间（站点当地）<input type="time" id="tplTime" required value="07:00"></label>
+                            <label>时长（分钟，可跨午夜）<input type="number" id="tplDuration" min="15" step="15" value="120" required></label>
+                            <label>截止到<input type="date" id="tplUntil" required></label>
+                        </div>
+                        <div class="form-row">
+                            <label>海报 URL<input type="text" id="tplPoster" placeholder="/posters/xxx.png"></label>
+                            <label>修改理由<input type="text" id="tplEditReason" placeholder="为什么创建/修改（可追溯）"></label>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">保存（重新生成未来场次，已结束场次不受影响）</button>
+                            <button type="button" class="btn btn-outline" id="tplReset">清空</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 实例详情 / 计算依据 弹窗 -->
+    <div class="modal" id="instanceModal">
+        <div class="modal-content">
+            <span class="modal-close" id="modalClose">&times;</span>
+            <h3 id="miTitle"></h3>
+            <div id="miMeta" class="mi-meta"></div>
+            <div id="miAdvisories"></div>
+            <h4>🧭 计算依据（为什么在这一天）</h4>
+            <ol id="miSteps" class="mi-steps"></ol>
+            <div class="form-row" id="miActions">
+                <input type="text" id="miReason" placeholder="取消/改期理由（必填，可追溯）">
+                <input type="datetime-local" id="miNewStart" title="改期新时间（站点当地）">
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary btn-small" id="miCancelBtn">取消本场</button>
+                <button class="btn btn-secondary btn-small" id="miRescheduleBtn">改期本场</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2026 智慧学习平台 · 城市慢行站季节年历</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+    <script src="js/calendar.js"></script>
+</body>
+</html>

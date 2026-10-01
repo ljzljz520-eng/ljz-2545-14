@@ -1,0 +1,10 @@
+{
+  "name": "smart-learn-slow-station",
+  "version": "1.0.0",
+  "private": true,
+  "description": "智慧学习平台 + 城市慢行站季节年历",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test tests/"
+  }
+}

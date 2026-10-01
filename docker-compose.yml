@@ -1,31 +1,25 @@
 version: '3.8'
 
 services:
+  # 静态站点（原 nginx 方式，仅前端页面）
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: smartlearn-web
+    build: .
     ports:
       - "8080:80"
-    restart: unless-stopped
     volumes:
-      # 开发模式：挂载本地文件，修改后自动生效
-      - ./index.html:/usr/share/nginx/html/index.html
-      - ./courses.html:/usr/share/nginx/html/courses.html
-      - ./plan.html:/usr/share/nginx/html/plan.html
-      - ./resources.html:/usr/share/nginx/html/resources.html
-      - ./profile.html:/usr/share/nginx/html/profile.html
-      - ./about.html:/usr/share/nginx/html/about.html
-      - ./contact.html:/usr/share/nginx/html/contact.html
-      - ./demo.html:/usr/share/nginx/html/demo.html
-      - ./css:/usr/share/nginx/html/css
-      - ./js:/usr/share/nginx/html/js
-    networks:
-      - smartlearn-network
-    environment:
-      - TZ=Asia/Shanghai
+      - ./:/usr/share/nginx/html:ro
+    restart: unless-stopped
 
-networks:
-  smartlearn-network:
-    driver: bridge
+  # 季节年历全栈服务（API + 静态站点，推荐入口）
+  calendar:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - calendar-data:/data          # SQLite 数据持久化
+    restart: unless-stopped
+
+volumes:
+  calendar-data:

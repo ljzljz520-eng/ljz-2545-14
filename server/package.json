@@ -1,0 +1,17 @@
+{
+  "name": "slow-station-calendar-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "seed": "node -e \"const{openDb}=require('./db');require('./seed').seedIfEmpty(openDb(process.env.DB_FILE||'data.sqlite'))\"",
+    "test": "cd .. && node --test tests/"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "description": "城市慢行站 · 季节年历服务：循环活动模板、有界实例展开、单次例外、施工相交判定",
+  "dependencies": {
+    "better-sqlite3": "^11.10.0"
+  }
+}
